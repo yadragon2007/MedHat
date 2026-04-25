@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Smart Patient Monitor</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #0f111a;
+            --card: #1a1d29;
+            --accent: #00f2ff;
+            --danger: #ff3366;
+            --success: #2ecc71;
+            --text-main: #e0e0e0;
+            --text-dim: #707585;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--text-main);
+        }
+
+        #status {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        #bpm-display {
+            text-align: right;
+        }
+
+        #bpm-value {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--accent);
+            margin: 0;
+            line-height: 1;
+        }
+
+        .bpm-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+        }
+
+        /* SOS Button Area */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .sos-btn-small {
+            background: rgba(255, 51, 102, 0.1);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .sos-btn-small:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .notify-btn {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .notify-btn:hover {
+            background: rgba(0, 242, 255, 0.1);
+        }
+
+        /* Section Titles */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Reports Section Specifics */
+        .add-report-btn {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 5px 15px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .add-report-btn:hover {
+            background: rgba(0, 242, 255, 0.1);
+        }
+
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .report-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .report-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+        }
+
+        .report-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        .report-bpm {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+            margin: 0;
+        }
+
+        .report-time {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 5px;
+        }
+
+        .report-condition {
+            margin-top: 10px;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--success);
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        /* Contacts Grid */
+        .contacts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .contact-card {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .contact-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .contact-text h4 {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .contact-text p {
+            margin: 0;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .call-btn {
+            color: var(--success);
+        }
+
+        canvas {
+            filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.05));
+        }
+
+        @media (max-width: 768px) {
+            .reports-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .add-report-btn {
+            background: transparent;
+            padding: 5px 15px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid var(--accent);
+            /* Default Border */
+            color: var(--accent);
+            /* Default Text */
+            transition: all 0.2s ease;
+        }
+
+        .add-report-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div>
+                <h2>
+                    <%= patientData.name %>
+                </h2>
+                <div id="status">Telemetry: Disconnected</div>
+            </div>
+            <div id="bpm-display">
+                <p id="bpm-value">--</p>
+                <span class="bpm-label">BPM</span>
+            </div>
+        </div>
+
+        <canvas id="myChart" height="140"></canvas>
+
+        <div class="controls">
+            <button type="button" class="notify-btn" id="notify-subscribe-btn" aria-label="Subscribe to push notifications">
+                <i data-lucide="bell" size="16"></i>
+                <span id="notify-btn-label">ENABLE NOTIFICATIONS</span>
+            </button>
+            <button type="button" class="sos-btn-small" onclick="sendManualAlert()">
+                <i data-lucide="alert-circle" size="16"></i> EMERGENCY SOS
+            </button>
+        </div>
+
+        <div class="section-header">
+            <div class="section-title">Emergency Contacts</div>
+        </div>
+        <div class="contacts-grid">
+            <% patientData.emergency_contact.forEach(contact=> { %>
+                <div class="contact-card">
+                    <div class="contact-info">
+                        <i data-lucide="user" color="#00f2ff" size="18"></i>
+                        <div class="contact-text">
+                            <h4>
+                                <%= contact.name %>
+                            </h4>
+                            <p>
+                                <%= contact.relation %>
+                            </p>
+                        </div>
+                    </div>
+                    <a href="tel:<%= contact.phone %>" class="call-btn"><i data-lucide="phone" size="18"></i></a>
+                </div>
+                <% }) %>
+
+
+        </div>
+
+        <div class="section-header">
+            <div class="section-title">Patient Reports</div>
+            <div style="display: flex; gap: 10px;">
+                <button class="add-report-btn" style="border-color: var(--text-dim); color: var(--text-dim);"
+                    onclick="toggleConditionLegend()">
+                    <i data-lucide="info" size="14"></i> GEN CONDITION
+                </button>
+
+                <button class="add-report-btn" onclick="window.location.href='/report'">
+                    <i data-lucide="plus" size="14"></i> ADD REPORT
+                </button>
+            </div>
+        </div>
+
+        <div id="condition-legend"
+            style="display: none; background: rgba(255,255,255,0.02); margin-bottom: 20px; padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 10px;">Condition Reference:</p>
+            <p>name: <%= patientData.name %>
+            </p>
+            <p>age : <%= patientData.age %>
+            </p>
+            <p>gender : <%= patientData.gender %>
+            </p>
+            <p>blood type : <%= patientData.blood_type %>
+            </p>
+            <p>phone : <%= patientData.phone %>
+            </p>
+            <p>address : <%= patientData.address %>
+            </p>
+
+        </div>
+
+
+        <div id="dynamic-reports-grid" class="reports-grid">
+            <% reports.forEach(reports=> { %>
+                <div class="report-card" onclick="window.location.href='/report/<%= reports.id %>/'"
+                    style="cursor:pointer">
+                    <div class="report-title">
+                        <%= reports.title %>
+                    </div>
+                    <p class="report-bpm">
+                        <%= reports.avgBpm %>
+                    </p>
+                    <% if (reports.datetime.getHours() + 1 > 12) { %>
+
+                        <div class="report-time">
+                            <%= reports.datetime.getDate() %>/<%= reports.datetime.getMonth() + 1 %>/<%=
+                                        reports.datetime.getFullYear() %> | <%= reports.datetime.getHours() + 1 - 12 %>:
+                                            <%= reports.datetime.getMinutes() +1 %> | PM
+
+                                                <% } else { %>
+
+                                                    <div class="report-time">
+                                                        <%= reports.datetime.getDate() %>/<%=
+                                                                reports.datetime.getMonth() + 1 %>/<%=
+                                                                    reports.datetime.getFullYear() %> | <%=
+                                                                        reports.datetime.getHours() + 1 %>:
+                                                                        <%= reports.datetime.getMinutes() +1 %> | AM
+                                                    </div>
+
+                                                    <% } %>
+
+                        </div>
+
+
+                </div>
+                <% }) %>
+        </div>
+
+        <script>
+            lucide.createIcons();
+            const vapidPublicKey = "<%= vapidPublicKey || '' %>";
+
+            const statusEl = document.getElementById('status');
+            const bpmEl = document.getElementById('bpm-value');
+            const ctx = document.getElementById('myChart').getContext('2d');
+
+            const myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(100).fill(""),
+                    datasets: [{
+                        data: Array(100).fill(null),
+                        borderColor: '#00f2ff',
+                        borderWidth: 2.5,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { display: false },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#555' } }
+                    },
+                    plugins: { legend: { display: false } },
+                    animation: false
+                }
+            });
+
+            const socket = io();
+
+            socket.on('connect', () => {
+                statusEl.innerText = "Telemetry: Live";
+                statusEl.style.color = "#00f2ff";
+            });
+
+            socket.on('disconnect', () => {
+                statusEl.innerText = "Telemetry: Offline";
+                statusEl.style.color = "#ff3366";
+            });
+
+            socket.on('arduino_data', (msg) => {
+                try {
+                    const jsonData = JSON.parse(msg.data);
+                    const sensorValue = jsonData.ecg;
+
+                    if (!isNaN(sensorValue)) {
+                        myChart.data.datasets[0].data.push(sensorValue);
+                        myChart.data.datasets[0].data.shift();
+                        myChart.update();
+                        bpmEl.innerText = jsonData.bpm;
+                    }
+                } catch (e) {
+                    console.error("Error parsing data:", e);
+                }
+            });
+
+            const notifyBtnLabel = document.getElementById('notify-btn-label');
+            const notifySubscribeBtn = document.getElementById('notify-subscribe-btn');
+
+            function setNotifyButtonSubscribed() {
+                if (notifyBtnLabel) notifyBtnLabel.textContent = 'NOTIFICATIONS ENABLED';
+            }
+
+            function urlBase64ToUint8Array(base64String) {
+                const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+                const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+            }
+
+            /** Request permission, subscribe with PushManager, POST subscription to /push/subscribe */
+            async function subscribeAndRegisterOnServer(interactive) {
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    if (interactive) alert("Push notifications are not supported in this browser.");
+                    return false;
+                }
+
+                if (!vapidPublicKey) {
+                    if (interactive) alert("VAPID public key is missing from the server configuration.");
+                    return false;
+                }
+
+                try {
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') {
+                        if (interactive) alert("Notification permission was not granted.");
+                        return false;
+                    }
+
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    let subscription = await registration.pushManager.getSubscription();
+
+                    if (!subscription) {
+                        subscription = await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                        });
+                    }
+
+                    const response = await fetch('/push/subscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subscription }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Subscription request failed");
+                    }
+
+                    setNotifyButtonSubscribed();
+                    if (interactive) alert("Notifications enabled successfully.");
+                    return true;
+                } catch (error) {
+                    console.error("Failed to enable notifications:", error);
+                    if (interactive) alert("Could not enable notifications.");
+                    return false;
+                }
+            }
+
+            if (notifySubscribeBtn) {
+                notifySubscribeBtn.addEventListener('click', () => subscribeAndRegisterOnServer(true));
+            }
+
+            /** If this browser already has a push subscription, sync it to the server and update the button */
+            async function syncExistingPushSubscription() {
+                if (!('serviceWorker' in navigator) || !('PushManager' in window) || !vapidPublicKey) return;
+                try {
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    const subscription = await registration.pushManager.getSubscription();
+                    if (!subscription) return;
+                    const response = await fetch('/push/subscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subscription }),
+                    });
+                    if (response.ok) setNotifyButtonSubscribed();
+                } catch (e) {
+                    console.error("Sync push subscription failed:", e);
+                }
+            }
+
+            async function sendManualAlert() {
+                try {
+                    const response = await fetch('/push/alert', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: "Emergency SOS",
+                            body: "Immediate medical attention is required.",
+                            url: "/",
+                            level: "critical",
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Alert dispatch failed");
+                    }
+
+                    const result = await response.json();
+                    alert(`Alert sent to ${result.sent} device(s).`);
+                } catch (error) {
+                    console.error("Failed to send manual alert:", error);
+                    alert("Could not send emergency alert.");
+                }
+            }
+
+            window.addEventListener('load', () => {
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then(() => syncExistingPushSubscription())
+                        .catch((error) => {
+                            console.error("Service worker registration failed:", error);
+                        });
+                }
+            });
+
+
+
+            // Helper function to color-code the condition tag in the grid
+            function getConditionStyle(condition, id) {
+                const report = document.getElementById(id);
+                console.log(report);
+
+                const styles = {
+                    CRITICAL: {
+                        bg: "rgba(255,51,102,0.1)",
+                        color: "#ff3366",
+                    },
+                    STABLE: {
+                        bg: "rgba(0,242,255,0.1)",
+                        color: "#00f2ff",
+                    },
+                    EXCELLENT: {
+                        bg: "rgba(46,204,113,0.1)",
+                        color: "#2ecc71",
+                    },
+                    ELEVATED: {
+                        bg: "rgba(241,196,15,0.1)",
+                        color: "#f1c40f",
+                    },
+
+                }
+
+                report.style.backgroundColor = styles[condition].bg;
+                report.style.color = styles[condition].color;
+            }
+
+
+
+
+
+
+            function toggleConditionLegend() {
+                const legend = document.getElementById('condition-legend');
+                if (legend.style.display === 'none') {
+                    legend.style.display = 'block';
+                } else {
+                    legend.style.display = 'none';
+                }
+            }
+        </script>
+</body>
+
+</html>
