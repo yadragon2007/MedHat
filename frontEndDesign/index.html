@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Smart Patient Monitor</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #0f111a;
+            --card: #1a1d29;
+            --accent: #00f2ff;
+            --danger: #ff3366;
+            --success: #2ecc71;
+            --text-main: #e0e0e0;
+            --text-dim: #707585;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--text-main);
+        }
+
+        #status {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        #bpm-display {
+            text-align: right;
+        }
+
+        #bpm-value {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--accent);
+            margin: 0;
+            line-height: 1;
+        }
+
+        .bpm-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+        }
+
+        /* SOS Button Area */
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .sos-btn-small {
+            background: rgba(255, 51, 102, 0.1);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .sos-btn-small:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Section Titles */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Reports Section Specifics */
+        .add-report-btn {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 5px 15px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .add-report-btn:hover {
+            background: rgba(0, 242, 255, 0.1);
+        }
+
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .report-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .report-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+        }
+
+        .report-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        .report-bpm {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+            margin: 0;
+        }
+
+        .report-time {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 5px;
+        }
+
+        .report-condition {
+            margin-top: 10px;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--success);
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        /* Contacts Grid */
+        .contacts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .contact-card {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .contact-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .contact-text h4 {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .contact-text p {
+            margin: 0;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .call-btn {
+            color: var(--success);
+        }
+
+        canvas {
+            filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.05));
+        }
+
+        @media (max-width: 768px) {
+            .reports-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .add-report-btn {
+            background: transparent;
+            padding: 5px 15px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid var(--accent);
+            /* Default Border */
+            color: var(--accent);
+            /* Default Text */
+            transition: all 0.2s ease;
+        }
+
+        .add-report-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div>
+                <h2>Real-Time Sensor Data</h2>
+                <div id="status">Telemetry: Disconnected</div>
+            </div>
+            <div id="bpm-display">
+                <p id="bpm-value">--</p>
+                <span class="bpm-label">BPM</span>
+            </div>
+        </div>
+
+        <canvas id="myChart" height="140"></canvas>
+
+        <div class="controls">
+            <button class="sos-btn-small" onclick="alert('Alerting Emergency Services...')">
+                <i data-lucide="alert-circle" size="16"></i> EMERGENCY SOS
+            </button>
+        </div>
+
+        <div class="section-header">
+            <div class="section-title">Emergency Contacts</div>
+        </div>
+        <div class="contacts-grid">
+            <div class="contact-card">
+                <div class="contact-info">
+                    <i data-lucide="user" color="#00f2ff" size="18"></i>
+                    <div class="contact-text">
+                        <h4>Sarah Johnson</h4>
+                        <p>Wife</p>
+                    </div>
+                </div>
+                <a href="tel:123" class="call-btn"><i data-lucide="phone" size="18"></i></a>
+            </div>
+            <div class="contact-card">
+                <div class="contact-info">
+                    <i data-lucide="heart" color="#ff3366" size="18"></i>
+                    <div class="contact-text">
+                        <h4>Dr. Michael Smith</h4>
+                        <p>Cardiologist</p>
+                    </div>
+                </div>
+                <a href="tel:456" class="call-btn"><i data-lucide="phone" size="18"></i></a>
+            </div>
+            <div class="contact-card">
+                <div class="contact-info">
+                    <i data-lucide="home" color="#f1c40f" size="18"></i>
+                    <div class="contact-text">
+                        <h4>David Williams</h4>
+                        <p>Son</p>
+                    </div>
+                </div>
+                <a href="tel:789" class="call-btn"><i data-lucide="phone" size="18"></i></a>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <div class="section-title">Patient Reports</div>
+            <div style="display: flex; gap: 10px;">
+                <button class="add-report-btn" style="border-color: var(--text-dim); color: var(--text-dim);"
+                    onclick="toggleConditionLegend()">
+                    <i data-lucide="info" size="14"></i> GEN CONDITION
+                </button>
+
+                <button class="add-report-btn" onclick="window.location.href='add_report.html'">
+                    <i data-lucide="plus" size="14"></i> ADD REPORT
+                </button>
+            </div>
+        </div>
+
+        <div id="condition-legend"
+            style="display: none; background: rgba(255,255,255,0.02); margin-bottom: 20px; padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 10px;">Condition Reference:</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <span class="report-condition"
+                    style="background: rgba(46, 204, 113, 0.1); color: #2ecc71;">Excellent</span>
+                <span class="report-condition" style="background: rgba(0, 242, 255, 0.1); color: #00f2ff;">Stable</span>
+                <span class="report-condition"
+                    style="background: rgba(241, 196, 15, 0.1); color: #f1c40f;">Elevated</span>
+                <span class="report-condition"
+                    style="background: rgba(255, 51, 102, 0.1); color: #ff3366;">Critical</span>
+            </div>
+        </div>
+
+
+        <div id="dynamic-reports-grid" class="reports-grid">
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const statusEl = document.getElementById('status');
+        const bpmEl = document.getElementById('bpm-value');
+        const ctx = document.getElementById('myChart').getContext('2d');
+
+        const myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array(100).fill(""),
+                datasets: [{
+                    data: Array(100).fill(null),
+                    borderColor: '#00f2ff',
+                    borderWidth: 2.5,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                scales: {
+                    x: { display: false },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#555' } }
+                },
+                plugins: { legend: { display: false } },
+                animation: false
+            }
+        });
+
+        const socket = io("http://192.168.100.178:3000");
+
+        socket.on('connect', () => {
+            statusEl.innerText = "Telemetry: Live";
+            statusEl.style.color = "#00f2ff";
+        });
+
+        socket.on('disconnect', () => {
+            statusEl.innerText = "Telemetry: Offline";
+            statusEl.style.color = "#ff3366";
+        });
+
+        socket.on('arduino_data', (msg) => {
+            try {
+                const jsonData = JSON.parse(msg.data);
+                const sensorValue = jsonData.ecg;
+
+                if (!isNaN(sensorValue)) {
+                    myChart.data.datasets[0].data.push(sensorValue);
+                    myChart.data.datasets[0].data.shift();
+                    myChart.update();
+                    bpmEl.innerText = jsonData.bpm;
+                }
+            } catch (e) {
+                console.error("Error parsing data:", e);
+            }
+        });
+
+
+
+        function loadReports() {
+            const reportsContainer = document.getElementById('dynamic-reports-grid');
+
+            // Retrieve the latest report from localStorage
+            const latestData = JSON.parse(localStorage.getItem('latestReport'));
+
+            // If no data exists, show a placeholder
+            if (!latestData) {
+                reportsContainer.innerHTML = '<p style="color:var(--text-dim); grid-column: span 3;">No reports saved yet.</p>';
+                return;
+            }
+
+            // Generate the HTML for the report card
+            // We use a template literal to inject the saved data
+            const reportHTML = `
+            <div class="report-card" onclick="window.location.href='report.html'" style="cursor:pointer">
+                <div class="report-title">${latestData.title}</div>
+                <p class="report-bpm">${latestData.avg}</p>
+                <div class="report-time">${latestData.datetime.replace('T', ' ')}</div>
+                <div class="report-condition" style="${getConditionStyle(latestData.condition)}">
+                    ${latestData.condition}
+                </div>
+            </div>
+        `;
+
+            reportsContainer.innerHTML = reportHTML;
+        }
+
+        // Helper function to color-code the condition tag in the grid
+        function getConditionStyle(condition) {
+            const styles = {
+                'CRITICAL': 'background: rgba(255,51,102,0.1); color: #ff3366;',
+                'STABLE': 'background: rgba(0,242,255,0.1); color: #00f2ff;',
+                'EXCELLENT': 'background: rgba(46,204,113,0.1); color: #2ecc71;',
+                'ELEVATED': 'background: rgba(241,196,15,0.1); color: #f1c40f;'
+            };
+            return styles[condition] || styles['STABLE'];
+        }
+
+        // Initialize the grid on page load
+        loadReports();
+
+
+        function toggleConditionLegend() {
+            const legend = document.getElementById('condition-legend');
+            if (legend.style.display === 'none') {
+                legend.style.display = 'block';
+            } else {
+                legend.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>

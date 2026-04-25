@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Patient Report</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #0f111a; 
+            --card: #1a1d29; 
+            --accent: #00f2ff;
+            --text-main: #e0e0e0; 
+            --text-dim: #707585;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg); 
+            color: var(--text-main); 
+            display: flex; 
+            justify-content: center; 
+            padding: 40px; 
+        }
+
+        .form-container { 
+            width: 100%; 
+            max-width: 500px; 
+            background: var(--card); 
+            padding: 30px; 
+            border-radius: 24px; 
+            border: 1px solid rgba(255,255,255,0.05); 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+        }
+
+        h2 { margin-bottom: 25px; font-size: 1.3rem; color: var(--accent); }
+        
+        .input-group { margin-bottom: 20px; text-align: left; }
+        
+        label { 
+            display: block; 
+            font-size: 0.75rem; 
+            color: var(--text-dim); 
+            margin-bottom: 8px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+        }
+
+        /* Fixed styling for inputs and selection list */
+        input, select, textarea { 
+            width: 100%; 
+            padding: 12px; 
+            background: #242734; /* Solid dark background for the box */
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 10px; 
+            color: white; 
+            font-family: inherit; 
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent);
+        }
+
+        /* This specifically makes the dropdown list items dark */
+        select option {
+            background-color: #1a1d29; /* Matches the card color */
+            color: white;
+            padding: 10px;
+        }
+
+        textarea { height: 100px; resize: none; }
+
+        .save-btn { 
+            width: 100%; 
+            padding: 15px; 
+            background: var(--accent); 
+            color: #000; 
+            border: none; 
+            border-radius: 12px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            margin-top: 10px; 
+            transition: all 0.2s ease;
+        }
+
+        .save-btn:hover { 
+            opacity: 0.9; 
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 242, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2><i data-lucide="plus-circle" style="vertical-align: middle; margin-right: 8px;"></i> New Report</h2>
+        
+        <div class="input-group">
+            <label>Report Title</label>
+            <input type="text" id="title" placeholder="e.g. Morning Checkup">
+        </div>
+
+        <div class="input-group">
+            <label>Date & Time</label>
+            <input type="datetime-local" id="datetime">
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <div class="input-group" style="flex: 1;"><label>Max BPM</label><input type="number" id="maxBpm"></div>
+            <div class="input-group" style="flex: 1;"><label>Min BPM</label><input type="number" id="minBpm"></div>
+            <div class="input-group" style="flex: 1;"><label>Avg BPM</label><input type="number" id="avgBpm"></div>
+        </div>
+
+        <div class="input-group">
+            <label>General Condition</label>
+            <select id="condition">
+                <option value="EXCELLENT">Excellent (Sinus Rhythm)</option>
+                <option value="STABLE" selected>Stable / Baseline</option>
+                <option value="RECOVERING">Post-Exertion Recovery</option>
+                <option value="ELEVATED">Elevated (Sinus Tachycardia)</option>
+                <option value="BRADYCARDIA">Bradycardia (Low Pulse)</option>
+                <option value="ARRHYTHMIA">Irregular (Arrhythmia Detected)</option>
+                <option value="CRITICAL">Critical / High Alert</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Doctor's Notes</label>
+            <textarea id="notes" placeholder="Enter clinical observations..."></textarea>
+        </div>
+
+        <button class="save-btn" onclick="saveData()">SAVE REPORT</button>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function saveData() {
+            const report = {
+                title: document.getElementById('title').value,
+                datetime: document.getElementById('datetime').value,
+                max: document.getElementById('maxBpm').value,
+                min: document.getElementById('minBpm').value,
+                avg: document.getElementById('avgBpm').value,
+                condition: document.getElementById('condition').value,
+                notes: document.getElementById('notes').value
+            };
+
+            if(!report.title || !report.datetime) {
+                alert("Please fill in the title and date.");
+                return;
+            }
+
+            localStorage.setItem('latestReport', JSON.stringify(report));
+            window.location.href = 'report.html'; 
+        }
+    </script>
+</body>
+</html>
