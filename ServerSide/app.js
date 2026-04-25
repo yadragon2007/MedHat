@@ -4,12 +4,15 @@ const http = require("http");
 const { Server } = require("socket.io");
 const { io: connectToPi } = require("socket.io-client");
 require("dotenv").config();
-
+const dns = require('node:dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 const { sendPushToAll, alertPayloadFromPiData } = require("./lib/push");
 
 const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer); // server to browser
+
+
 
 app.set("view engine", "ejs");
 app.set("views", "./views");
