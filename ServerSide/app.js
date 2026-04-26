@@ -69,7 +69,7 @@ async function run() {
 run();
 
 // Connect to Pi
-const piSocket = connectToPi("http://192.168.100.178:3000");
+const piSocket = connectToPi("http://192.168.100.97:3000");
 
 piSocket.on("connect", async () => {
   console.log("Connected to Pi");
@@ -84,8 +84,9 @@ piSocket.on("disconnect", () => {
 });
 
 // Forward Pi data → browser
-piSocket.on("arduino_data", (data) => {
-  io.emit("arduino_data", data); // broadcast to all browser clients
+piSocket.on("arduinoData", (data) => {
+  io.emit("arduinoData", data); // broadcast to all browser clients
+  console.log(data);
 });
 
 // Forward Pi data → browser

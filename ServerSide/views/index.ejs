@@ -440,9 +440,9 @@
                 statusEl.style.color = "#ff3366";
             });
 
-            socket.on('arduino_data', (msg) => {
+            socket.on('arduinoData', (msg) => {
                 try {
-                    const jsonData = JSON.parse(msg.data);
+                    const jsonData = JSON.parse(msg);
                     const sensorValue = jsonData.ecg;
 
                     if (!isNaN(sensorValue)) {
