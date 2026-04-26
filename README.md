@@ -41,7 +41,7 @@ The system is designed to operate **continuously and autonomously** — if the i
 ---
 
 ## System Architecture
-
+<!-- 
 ```
 Patient (voice)
      │
@@ -61,8 +61,9 @@ Raspberry Pi  ◄──── MQTT ──── ESP32 + AD8232
      │
      ▼
 React Dashboard  ──►  Caregiver / Doctor
-```
+``` -->
 
+![System Architecture](assets/sysD.png)
 ---
 
 ## Hardware Components
@@ -88,10 +89,10 @@ React Dashboard  ──►  Caregiver / Doctor
 3. ESP32 publishes JSON payload to MQTT topic: mediguard/ecg
 4. Raspberry Pi receives reading and classifies the condition
    a. Normal  → forward to Web Server + store locally
-   b. Anomaly → trigger alert (Twilio / SIM800L / web-push)
+   b. Anomaly → trigger alert ( SIM800L / web-push)
 5. Web Server receives data via Socket.IO
 6. Data is stored in MongoDB
-7. React dashboard displays live data to caregivers
+7. Dashboard displays live data to caregivers
 8. Patient speaks a command:
    Mic → STT (Vosk) → Pi processes → TTS (espeak/ElevenLabs) → Speaker
 ```
@@ -101,7 +102,8 @@ React Dashboard  ──►  Caregiver / Doctor
 ```json
 {
   "heart_rate": 76,
-  "condition": "normal"
+  "condition": "normal",
+  "leads_off": false
 }
 ```
 

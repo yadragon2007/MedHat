@@ -274,11 +274,13 @@
             transform: translateY(-1px);
         }
     </style>
+    <link rel="stylesheet" href="style.css">    
 </head>
 
 <body>
 
     <div class="container">
+        <%- include('nav.ejs') %>
         <div class="header">
             <div>
                 <h2>
@@ -295,7 +297,8 @@
         <canvas id="myChart" height="140"></canvas>
 
         <div class="controls">
-            <button type="button" class="notify-btn" id="notify-subscribe-btn" aria-label="Subscribe to push notifications">
+            <button type="button" class="notify-btn" id="notify-subscribe-btn"
+                aria-label="Subscribe to push notifications">
                 <i data-lucide="bell" size="16"></i>
                 <span id="notify-btn-label">ENABLE NOTIFICATIONS</span>
             </button>
@@ -371,7 +374,7 @@
                     <p class="report-bpm">
                         <%= reports.avgBpm %>
                     </p>
-                    <% if (reports.datetime.getHours() + 1 > 12) { %>
+                    <% if (reports.datetime.getHours() + 1> 12) { %>
 
                         <div class="report-time">
                             <%= reports.datetime.getDate() %>/<%= reports.datetime.getMonth() + 1 %>/<%=
@@ -395,7 +398,10 @@
 
                 </div>
                 <% }) %>
+                    <%- include('footer.ejs') %>
+
         </div>
+
 
         <script>
             lucide.createIcons();

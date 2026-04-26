@@ -4,6 +4,7 @@
 <head>
     <title>Add Patient Report</title>
     <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
         :root {
             --bg: #0f111a;
@@ -106,59 +107,63 @@
             box-shadow: 0 5px 15px rgba(0, 242, 255, 0.3);
         }
     </style>
+    <link rel="stylesheet" href="style.css">
+
 </head>
 
 <body>
     <form action="/report/" method="POST">
 
-        <div class="form-container">
-            <h2><i data-lucide="plus-circle" style="vertical-align: middle; margin-right: 8px;"></i> New Report</h2>
+            <div class="form-container">
+                        <%- include('nav.ejs') %>
 
-            <div class="input-group">
-                <label>Report Title</label>
-                <input type="text" id="title" name="title" placeholder="e.g. Morning Checkup">
+                <h2><i data-lucide="plus-circle" style="vertical-align: middle; margin-right: 8px;"></i> New Report</h2>
+
+                <div class="input-group">
+                    <label>Report Title</label>
+                    <input type="text" id="title" name="title" placeholder="e.g. Morning Checkup">
+                </div>
+
+                <div class="input-group">
+                    <label>Date & Time</label>
+                    <input type="datetime-local" name="datetime" id="datetime">
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="input-group" style="flex: 1;"><label>Max BPM</label><input type="number" name="maxBpm"
+                            id="maxBpm"></div>
+                    <div class="input-group" style="flex: 1;"><label>Min BPM</label><input type="number" name="minBpm"
+                            id="minBpm"></div>
+                    <div class="input-group" style="flex: 1;"><label>Avg BPM</label><input type="number" name="avgBpm"
+                            id="avgBpm"></div>
+                </div>
+
+                <div class="input-group">
+                    <label>General Condition</label>
+                    <select id="condition" name="condition">
+                        <option value="EXCELLENT">Excellent (Sinus Rhythm)</option>
+                        <option value="STABLE" selected>Stable / Baseline</option>
+                        <option value="RECOVERING">Post-Exertion Recovery</option>
+                        <option value="ELEVATED">Elevated (Sinus Tachycardia)</option>
+                        <option value="BRADYCARDIA">Bradycardia (Low Pulse)</option>
+                        <option value="ARRHYTHMIA">Irregular (Arrhythmia Detected)</option>
+                        <option value="CRITICAL">Critical / High Alert</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Doctor's Notes</label>
+                    <textarea id="notes" name="notes" placeholder="Enter clinical observations..."></textarea>
+                </div>
+
+                <button class="save-btn" type="submit">SAVE REPORT</button>
             </div>
+            <%- include('footer.ejs') %>
 
-            <div class="input-group">
-                <label>Date & Time</label>
-                <input type="datetime-local" name="datetime" id="datetime">
-            </div>
-
-            <div style="display: flex; gap: 10px;">
-                <div class="input-group" style="flex: 1;"><label>Max BPM</label><input type="number" name="maxBpm"
-                        id="maxBpm"></div>
-                <div class="input-group" style="flex: 1;"><label>Min BPM</label><input type="number" name="minBpm"
-                        id="minBpm"></div>
-                <div class="input-group" style="flex: 1;"><label>Avg BPM</label><input type="number" name="avgBpm"
-                        id="avgBpm"></div>
-            </div>
-
-            <div class="input-group">
-                <label>General Condition</label>
-                <select id="condition" name="condition">
-                    <option value="EXCELLENT">Excellent (Sinus Rhythm)</option>
-                    <option value="STABLE" selected>Stable / Baseline</option>
-                    <option value="RECOVERING">Post-Exertion Recovery</option>
-                    <option value="ELEVATED">Elevated (Sinus Tachycardia)</option>
-                    <option value="BRADYCARDIA">Bradycardia (Low Pulse)</option>
-                    <option value="ARRHYTHMIA">Irregular (Arrhythmia Detected)</option>
-                    <option value="CRITICAL">Critical / High Alert</option>
-                </select>
-            </div>
-
-            <div class="input-group">
-                <label>Doctor's Notes</label>
-                <textarea id="notes" name="notes" placeholder="Enter clinical observations..."></textarea>
-            </div>
-
-            <button class="save-btn" type="submit">SAVE REPORT</button>
-        </div>
     </form>
 
 
-    <script>
 
-    </script>
 </body>
 
 </html>

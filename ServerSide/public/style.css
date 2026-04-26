@@ -1,0 +1,143 @@
+/* Footer Styles */
+.main-footer {
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    width: 100%;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.copyright {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin: 0;
+}
+
+.linkedin-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    padding: 5px 12px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.linkedin-link:hover {
+    color: #0077b5; /* LinkedIn's Brand Color */
+    background: rgba(0, 119, 181, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Ensure icons render in the footer */
+.linkedin-link i {
+    display: inline-block;
+}
+
+@media (max-width: 600px) {
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+
+/* Navigation Styles */
+.smart-nav {
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(26, 29, 41, 0.8); /* Semi-transparent card color */
+    backdrop-filter: blur(10px); /* Blur effect for "Smart" look */
+    z-index: 1000;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 20px;
+}
+
+.nav-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-name {
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: -0.5px;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.nav-item {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s ease;
+}
+
+.nav-item:hover {
+    color: var(--accent);
+}
+
+/* System Status Pill */
+.system-status {
+    background: rgba(0, 242, 255, 0.1);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 1px;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background-color: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+@media (max-width: 600px) {
+    .nav-item span { display: none; } /* Icon only on mobile */
+    .brand-name { font-size: 1rem; }
+}
