@@ -2,7 +2,7 @@
 
 > **Continuous cardiac monitoring, wherever the patient goes.**
 
-MediGuard is a smart medical IoT system that monitors a patient's heart rate in real time using an ECG sensor, responds to voice commands, and instantly alerts caregivers and emergency contacts when a critical condition is detected.
+MEDhat is a smart medical IoT system that monitors a patient's heart rate in real time using an ECG sensor, responds to voice commands, and instantly alerts caregivers and emergency contacts when a critical condition is detected.
 
 ---
 
@@ -28,7 +28,7 @@ MediGuard is a smart medical IoT system that monitors a patient's heart rate in 
 
 ## Overview
 
-MediGuard is built around three layers:
+MEDhat is built around three layers:
 
 | Layer | Description |
 |---|---|
