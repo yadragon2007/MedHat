@@ -1,4 +1,4 @@
-# MediGuard 🫀
+# MEDhat 🫀
 
 > **Continuous cardiac monitoring, wherever the patient goes.**
 
