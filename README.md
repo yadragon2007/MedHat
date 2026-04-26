@@ -398,7 +398,7 @@ node index.js
 
 Create a `.env` file in both `mediguard-pi/` and `mediguard-server/`:
 
-### mediguard-pi (`config/settings.py`)
+### MEDhat (`config/settings.py`)
 
 ```python
 MQTT_BROKER_IP    = "192.168.x.x"     # Pi's local IP
@@ -419,7 +419,7 @@ BPM_CRITICAL_HIGH  = 150
 BPM_CRITICAL_LOW   = 40
 ```
 
-### mediguard-server (`.env`)
+### MEDhat (`.env`)
 
 ```env
 MONGODB_URI=mongodb+srv://...
@@ -477,4 +477,4 @@ GND           GND           Common ground
 
 ---
 
-*MediGuard — Continuous care, wherever the patient goes.*
+*MEDhat — Continuous care, wherever the patient goes.*
