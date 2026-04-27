@@ -395,4 +395,4 @@ endpoint (unique), keys: { p256dh, auth }, expirationTime, lastSeen
 
 © 2026 MedHat. All Rights Reserved.
 
-**LinkedIn** — [Yousef Amr](https://www.linkedin.com/in/yousef-amr-b3a77b373/) — Let's talk engineering.
+**LinkedIn** — [Yousef Amr](https://www.linkedin.com/in/yousef-amr-b3a77b373/) — Let's talk.
