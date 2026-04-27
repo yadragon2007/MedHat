@@ -11,7 +11,8 @@ const { sendPushToAll, alertPayloadFromPiData } = require("./lib/push");
 const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer); // server to browser
-
+//dot env
+require('dotenv').config()
 
 
 app.set("view engine", "ejs");
@@ -44,7 +45,7 @@ app.use("/push", pushRoutes);
 const mongoose = require("mongoose");
 const { CLOSING } = require("ws");
 const uri =
-  "mongodb+srv://yousef6448_db_user:UUlunDVXfyyxd2DH@cluster0.ivo3yv1.mongodb.net/Medhat?appName=Cluster0";
+  `mongodb+srv://${process.env.MONGODBUSER}:${process.env.MONGODBPASSWORD}@cluster0.ivo3yv1.mongodb.net/Medhat?appName=Cluster0`;
 
 const clientOptions = {
   serverApi: { version: "1", strict: true, deprecationErrors: true },
