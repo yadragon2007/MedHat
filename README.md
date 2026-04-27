@@ -1,482 +1,398 @@
-# MEDhat 🫀
+# MedHat — Smart ECG Monitor System
 
-> **Continuous cardiac monitoring, wherever the patient goes.**
-
-MEDhat is a smart medical IoT system that monitors a patient's heart rate in real time using an ECG sensor, responds to voice commands, and instantly alerts caregivers and emergency contacts when a critical condition is detected.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [System Architecture](#system-architecture)
-- [Hardware Components](#hardware-components)
-- [Communication Flow](#communication-flow)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Database Design](#database-design)
-- [ECG Condition Classification](#ecg-condition-classification)
-- [Alert System](#alert-system)
-- [Voice Interaction](#voice-interaction)
-- [Setup & Installation](#setup--installation)
-- [Environment Variables](#environment-variables)
-- [LED Indicators](#led-indicators)
-- [Wiring Reference](#wiring-reference)
+A real-time smart patient monitoring system that streams live ECG data from a hardware sensor node to a web dashboard, with voice assistant capabilities, push notifications, and persistent clinical reporting.
 
 ---
 
 ## Overview
 
-MEDhat is built around three layers:
+MedHat connects a physical ECG sensor (AD8232) through an Arduino/ESP32 microcontroller to a Raspberry Pi hub, which processes the signal, classifies cardiac conditions, and streams data to a Node.js web server. The dashboard displays a live ECG waveform, current BPM, patient info, emergency contacts, and clinical reports — all backed by MongoDB.
 
-| Layer | Description |
-|---|---|
-| **Wearable Sensor Unit** | ESP32 + AD8232 ECG sensor worn by the patient |
-| **Hub (Raspberry Pi 3)** | Central brain — processes ECG data, handles voice, manages alerts |
-| **Cloud (Web Server + Database)** | Stores data permanently and serves the caregiver dashboard |
-
-The system is designed to operate **continuously and autonomously** — if the internet goes down, readings are buffered locally and synced automatically when the connection is restored.
+A voice assistant running on the Pi allows the patient to ask for their heart rate or status using a wake word ("Hey Medhat"), and the system can send push notifications to registered browsers when a critical condition is detected.
 
 ---
 
 ## System Architecture
-<!-- 
+
+<!--
 ```
-Patient (voice)
-     │
-     ▼
- Microphone
-     │  STT (Vosk — offline)
-     ▼
-Raspberry Pi  ◄──── MQTT ──── ESP32 + AD8232
-     │
-     │  Socket.IO (WebSocket)
-     ▼
- Web Server (Node.js / Express)
-     │                    │
-     ▼                    ▼
-  MongoDB              SQLite
-(cloud records)    (offline buffer)
-     │
-     ▼
-React Dashboard  ──►  Caregiver / Doctor
-``` -->
-
-![System Architecture](assets/sysD.png)
----
-
-## Hardware Components
-
-| Component | Role |
-|---|---|
-| **ESP32** | Sensor node — reads ECG data and publishes via MQTT over WiFi |
-| **AD8232 ECG Sensor** | Captures the patient's electrocardiogram signal |
-| **Raspberry Pi 3** | Hub — runs all Python services and coordinates the system |
-| **USB Microphone** | Captures patient voice commands |
-| **Speaker** | Plays TTS voice responses back to the patient |
-| **LEDs (x3)** | Visual status indicators (see [LED Indicators](#led-indicators)) |
-| **Stepper Motor Driver** | Physical actuation (e.g. medication dispensing) |
-| **SIM800L (GSM)** | Fallback SMS/call alerts when internet is unavailable |
-
----
-
-## Communication Flow
-
+[AD8232 ECG Sensor]
+        |
+        v
+[Arduino / ESP32]  ──── Serial (USB) / MQTT ────>  [Raspberry Pi 3]
+                                                          |
+                                          ┌───────────────┼───────────────┐
+                                          |               |               |
+                                     [MQTT Broker]  [Voice Service]  [GPIO LEDs]
+                                          |         (Vosk STT +      (Pin 17, 27)
+                                          |          espeak TTS)
+                                          v
+                                   [Python Server]
+                                   (Flask-SocketIO)
+                                          |
+                                    Socket.IO Client
+                                          |
+                                          v
+                                [Node.js Web Server]
+                                (Express + Socket.IO)
+                                          |
+                              ┌───────────┴───────────┐
+                              |                       |
+                         [MongoDB Atlas]        [Browser Dashboard]
+                         (Reports, Patients,    (EJS Views, Chart.js,
+                          Push Subscriptions)    Web Push Notifications)
 ```
-1. Patient wears ECG sensor (AD8232 on ESP32)
-2. ESP32 samples ECG at 200 Hz, detects R-peaks, calculates BPM
-3. ESP32 publishes JSON payload to MQTT topic: mediguard/ecg
-4. Raspberry Pi receives reading and classifies the condition
-   a. Normal  → forward to Web Server + store locally
-   b. Anomaly → trigger alert ( SIM800L / web-push)
-5. Web Server receives data via Socket.IO
-6. Data is stored in MongoDB
-7. Dashboard displays live data to caregivers
-8. Patient speaks a command:
-   Mic → STT (Vosk) → Pi processes → TTS (espeak/ElevenLabs) → Speaker
-```
+ -->
 
-### MQTT Payload Format
-
-```json
-{
-  "heart_rate": 76,
-  "condition": "normal",
-  "leads_off": false
-}
-```
-
-Topic: `mediguard/ecg`
-
----
+## ![System Architecture](assets/sysD.png)
 
 ## Features
 
-### Real-Time ECG Monitoring
-- Continuous heart rate measurement at 200 Hz sampling rate
-- Live ECG waveform streamed to the web dashboard
-- BPM calculation using R-R interval detection with hysteresis
-
-### Voice Interaction
-- Wake word detection: **"Hey Medhat"**
-- Offline speech-to-text using **Vosk**
-- Patient can ask: *"What is my heart rate?"*, *"Am I okay?"*, etc.
-- Voice responses via **espeak** (offline) or **ElevenLabs** (online)
-
-### Smart Alerts
-- Automatic SMS and phone calls to family and emergency contacts on critical readings
-- Three alert channels: **Twilio**, **SIM800L (GSM fallback)**, **Web Push**
-
-### Medical Reports
-- Full historical ECG data stored in MongoDB
-- Condition summaries, alert history, and trend analysis
-- Viewable and filterable by date range on the web dashboard
-
-### Emergency Contact System
-- Calls and SMS sent automatically to registered family members
-- Escalates based on severity of detected condition
-- Works even without internet via SIM800L GSM module
-
-### Offline Resilience
-- Local SQLite buffer on the Pi stores readings during internet outages
-- Automatic sync to MongoDB on reconnection
-- All readings flagged with `synced_from_local: true` after sync
+- **Live ECG Waveform** — Scrolling real-time graph via Socket.IO and Chart.js
+- **BPM Calculation** — Peak detection with R-R interval averaging on the microcontroller
+- **Condition Classification** — 8 cardiac states detected and labeled automatically
+- **Voice Assistant** — Wake word detection ("Hey Medhat") with offline Vosk STT and espeak TTS
+- **Push Notifications** — Web Push (VAPID) alerts sent to subscribed browsers on critical conditions
+- **Emergency SOS** — One-tap button to broadcast an alert to all registered devices
+- **Care Circle** — Click-to-call emergency contact cards pulled from the patient profile
+- **Clinical Reports** — Create, store, and print patient session reports backed by MongoDB
+- **Patient Dashboard** — Name, age, blood type, address, and contact info rendered server-side
+- **GPIO Feedback** — LED on Pin 17 indicates Pi–browser connection; LED on Pin 27 tracks voice service state
 
 ---
 
-## Tech Stack
+## Technology Stack
 
-| Layer | Technology |
-|---|---|
-| Sensor Node | ESP32, AD8232, Arduino (C++) |
-| Hub OS | Raspberry Pi OS (headless) |
-| Hub Language | Python 3 |
-| Sensor Communication | MQTT (topic: `mediguard/ecg`) |
-| Pi → Web Communication | Socket.IO (WebSocket) |
-| Web Server | Node.js + Express |
-| Frontend | React + EJS |
-| Cloud Database | MongoDB |
-| Local Buffer | SQLite |
-| Voice STT | Vosk (offline) |
-| Voice TTS | espeak (offline) / ElevenLabs (online) |
-| Alerts | Twilio, SIM800L, web-push |
-| AI Integration | OpenRouter API |
-| Version Control | GitHub (SSH auth) |
+| Layer              | Technology                                              |
+| ------------------ | ------------------------------------------------------- |
+| Sensor Node        | Arduino / ESP32, AD8232 ECG module                      |
+| Embedded Firmware  | C++ (Arduino IDE), FreeRTOS (ESP32 dual-core)           |
+| Hub                | Raspberry Pi 3 (Python 3)                               |
+| Hub Services       | Flask-SocketIO, Paho MQTT, Vosk, PyAudio, NumPy, espeak |
+| Web Backend        | Node.js, Express 5, Socket.IO 4                         |
+| Templating         | EJS                                                     |
+| Database           | MongoDB Atlas via Mongoose                              |
+| Push Notifications | Web Push (VAPID), Service Worker                        |
+| Frontend           | HTML5, CSS3, JavaScript ES6+, Chart.js, Lucide Icons    |
+| Dev Tools          | Nodemon, dotenv, Git / GitHub (SSH)                     |
 
 ---
 
 ## Project Structure
 
-### Raspberry Pi (Python)
-
 ```
-mediguard-pi/
-├── main.py                        # Entry point
-├── config/
-│   ├── __init__.py
-│   └── settings.py                # IP addresses, thresholds, API keys
-├── controllers/
-│   ├── __init__.py
-│   └── hub_controller.py          # Main logic coordinator
-├── models/
-│   ├── __init__.py
-│   └── reading.py                 # ECG reading data model
-├── services/
-│   ├── __init__.py
-│   ├── mqtt_service.py            # MQTT subscriber
-│   ├── ecg_service.py             # ECG parsing, validation, batching
-│   ├── voice_service.py           # Wake word, STT, TTS
-│   └── alert_service.py           # Twilio / SIM800L alerts
-└── vosk-models/                   # Offline STT model files
-```
-
-### Web Server (Node.js)
-
-```
-mediguard-server/
-├── index.js                       # Entry point
-├── config/
-│   └── db.js                      # MongoDB connection
-├── controllers/
-│   └── readingController.js       # Handle incoming ECG data
-├── models/
-│   └── Reading.js                 # MongoDB schema
-├── routes/
-│   └── api.js                     # REST API routes
-├── views/
-│   └── index.ejs                  # Dashboard template
-├── websocket/
-│   └── piSocket.js                # Socket.IO handler for Pi connection
-└── services/
-    └── alertService.js            # Twilio / web-push notifications
+medhat/
+├── Arduino/
+│   └── ECG/
+│       └── ECG.ino                  # ECG sketch: AD8232 → Serial JSON
+│
+├── Raspberrypi/
+│   └── SDG_Python/
+│       ├── main.py                  # Pi hub: Socket.IO server, Arduino reader, voice trigger
+│       ├── services/
+│       │   ├── voice_service.py     # Vosk STT, wake word loop, GPIO LED feedback
+│       │   └── tts_service.py       # espeak TTS helpers
+│       └── vosk-models/             # Offline Vosk language model (gitignored)
+│
+├── webServer/
+│   ├── app.js                       # Express entry point, Socket.IO bridge, MongoDB connect
+│   ├── routes/
+│   │   ├── Index.js                 # GET /
+│   │   ├── report.js                # GET|POST /report, GET /report/:id
+│   │   └── push.js                  # POST /push/subscribe, POST /push/alert
+│   ├── controller/
+│   │   ├── patientController.js     # Patient default seed, home render
+│   │   └── reportController.js      # Report CRUD
+│   ├── models/
+│   │   ├── Patient.js               # Mongoose patient schema
+│   │   ├── Report.js                # Mongoose report schema
+│   │   └── PushSubscription.js      # Mongoose push subscription schema
+│   ├── lib/
+│   │   └── push.js                  # VAPID setup, sendPushToAll, saveSubscription
+│   ├── views/
+│   │   ├── index.ejs                # Live dashboard
+│   │   ├── add_report.ejs           # Report creation form
+│   │   ├── report.ejs               # Report detail / print view
+│   │   ├── nav.ejs                  # Shared navigation partial
+│   │   └── footer.ejs               # Shared footer partial
+│   ├── public/
+│   │   ├── style.css                # Navigation and footer styles
+│   │   └── sw.js                    # Service worker for Web Push
+│   └── package.json
+│
+└── README.md
 ```
 
 ---
 
-## Database Design
+## Hardware Setup & Wiring
 
-### Collections (MongoDB)
+### AD8232 ECG Sensor → Arduino
 
-#### `ecg_readings`
-One document inserted every 5 seconds, containing 300 ADC samples at 60 Hz.
+| AD8232 Pin | Arduino Pin        |
+| ---------- | ------------------ |
+| OUTPUT     | A0                 |
+| LO+        | D4                 |
+| LO-        | D3                 |
+| 3.3V       | 3.3V               |
+| GND        | GND                |
+| SDN        | 3.3V (keep active) |
 
-```json
-{
-  "_id": "ObjectId",
-  "ecg_values": [2048, 2103, 2187, "...297 more"],
-  "bpm_avg": 76,
-  "bpm_min": 72,
-  "bpm_max": 81,
-  "condition": "normal",
-  "sample_rate": 300,
-  "synced_from_local": false,
-  "timestamp": "ISODate"
-}
-```
+> If using an **ESP32** instead of Arduino, connect OUTPUT to **GPIO34** (ADC1). Do not use ADC2 pins — they conflict with WiFi.
 
-#### `alerts`
-Created on every anomalous reading.
+### Raspberry Pi GPIO
 
-```json
-{
-  "_id": "ObjectId",
-  "reading_id": "ObjectId",
-  "condition": "critical_tachy",
-  "heart_rate_at_alert": 158,
-  "triggered_at": "ISODate",
-  "resolved": false,
-  "resolved_at": null,
-  "notes": ""
-}
-```
+| GPIO Pin | Purpose                                             |
+| -------- | --------------------------------------------------- |
+| 17       | Browser connection indicator (solid on = connected) |
+| 27       | Voice service LED (on during command listening)     |
+| 22       | ECG leads status (on = leads attached)              |
 
-#### `patients`
-Single document — the monitored patient's profile.
+---
+
+## Installation & Setup
+
+### 1. Sensor Node (Arduino / ESP32)
+
+Open `Arduino/ECG/ECG.ino` in the Arduino IDE and flash it to your board. The sketch reads the AD8232 and outputs JSON over Serial at 9600 baud:
 
 ```json
-{
-  "_id": "ObjectId",
-  "name": "Ahmed Hassan",
-  "age": 67,
-  "blood_type": "A+",
-  "emergency_contact": {
-    "name": "Sara Hassan",
-    "relation": "daughter",
-    "phone": "+201009876543"
-  }
-}
+{ "ecg": 612, "bpm": 74, "condition": "normal", "leads_off": false }
 ```
 
-### Offline Buffer (SQLite on Pi)
+If leads are disconnected:
 
-```sql
-CREATE TABLE ecg_buffer (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  heart_rate  INTEGER NOT NULL,
-  condition   TEXT NOT NULL,
-  timestamp   TEXT NOT NULL,
-  synced      INTEGER DEFAULT 0
-);
+```json
+{ "ecg": 0, "bpm": 0, "leads_off": true, "condition": "unknown" }
 ```
+
+### 2. Raspberry Pi Server
+
+Install Python dependencies:
+
+```bash
+pip install flask flask-socketio eventlet pyserial paho-mqtt vosk pyaudio numpy RPi.GPIO requests
+```
+
+Download a Vosk model and place it at:
+
+```
+Raspberrypi/SDG_Python/vosk-models/vosk-model-small-en-us-0.15/
+```
+
+Run the Pi server:
+
+```bash
+cd Raspberrypi/SDG_Python
+python main.py
+```
+
+The Pi server listens on port **3000** and emits `arduino_data` events to connected Socket.IO clients.
+
+### 3. Web Server (Node.js)
+
+```bash
+cd webServer
+npm install
+```
+
+Create a `.env` file in `webServer/`:
+
+```env
+WEBPUSH_SUBJECT=mailto:you@example.com
+WEBPUSHPUPLIC=your_vapid_public_key
+WEBPUSHPRIVATE=your_vapid_private_key
+MONGODBUSER=your_mongodb_user
+MONGODBPASSWORD=your_mongodb_password
+```
+
+Generate VAPID keys:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Update the Pi IP in `app.js`:
+
+```javascript
+const piSocket = connectToPi("http://<PI_IP>:3000");
+```
+
+Start the server:
+
+```bash
+npm run dev       # nodemon (development)
+node app.js       # production
+```
+
+The web server runs on port **8080**.
+
+### 4. MongoDB
+
+The app connects to MongoDB Atlas. Update the connection URI in `app.js`:
+
+```javascript
+const uri = `mongodb+srv://${process.env.MONGODBUSER}:${process.env.MONGODBPASSWORD}@cluster0.ivo3yv1.mongodb.net/Medhat?appName=Cluster0`;
+```
+
+A default patient record is seeded automatically on first run if the `patients` collection is empty.
 
 ---
 
 ## ECG Condition Classification
 
-| Condition | Trigger |
-|---|---|
-| `normal` | BPM within 60–100, regular rhythm |
-| `tachycardia` | BPM > 100 |
-| `critical_tachy` | BPM > 150 |
-| `bradycardia` | BPM < 60 |
-| `critical_brady` | BPM < 40 |
-| `arrhythmia` | Irregular R-R interval detected |
-| `cardiac_arrest` | No cardiac activity detected |
-| `leads_off` | ECG leads disconnected from patient |
-| `initializing` | System startup — calibrating baseline |
+Conditions are classified on the microcontroller based on averaged R-R interval BPM, and re-evaluated on the Pi for voice and push alerts.
 
-BPM is calculated using:
+| Condition        | Trigger                 | Severity     |
+| ---------------- | ----------------------- | ------------ |
+| `normal`         | 60–100 BPM              | —            |
+| `tachycardia`    | 100–150 BPM             | Caution      |
+| `critical_tachy` | > 150 BPM               | Warning      |
+| `bradycardia`    | 40–60 BPM               | Caution      |
+| `critical_brady` | < 40 BPM                | Warning      |
+| `arrhythmia`     | Irregular R-R intervals | Warning      |
+| `cardiac_arrest` | No pulse detected       | Emergency    |
+| `leads_off`      | LO+ or LO- pin HIGH     | Sensor alert |
+
+Abnormal conditions trigger a spoken alert via espeak on the Pi. The same condition is not repeated for 60 seconds unless it changes.
+
+---
+
+## Real-Time Data Flow
 
 ```
-BPM = 60000 / RR_interval_ms
+Arduino Serial JSON
+        |
+   main.py (Pi)
+   readline() → json.loads()
+        |
+   sio.emit('arduino_data', data)   ← Flask-SocketIO (port 3000)
+        |
+   app.js (Node.js)
+   piSocket.on('arduinoData') → io.emit('arduinoData', data)
+        |
+   index.ejs (Browser)
+   socket.on('arduinoData') → Chart.js update + BPM display
+```
+
+> Note: The Pi emits `arduino_data` (snake_case); the web server re-emits as `arduinoData` (camelCase) to the browser.
+
+---
+
+## Voice Assistant
+
+The voice service runs as a background thread on the Pi using Vosk for fully offline speech recognition.
+
+**Wake word:** `Hey Medhat`
+
+**Supported commands:**
+
+| Command                 | Action                                              |
+| ----------------------- | --------------------------------------------------- |
+| `what is my heart rate` | Speaks current BPM                                  |
+| `what is my status`     | Speaks current condition                            |
+| `call my doctor`        | Speaks confirmation message                         |
+| `call emergency`        | Speaks confirmation message                         |
+| `thanks`                | Ends the command session, returns to wake word mode |
+
+**LED feedback:** GPIO 27 turns on when the system is actively listening for a command and turns off when it returns to wake word standby.
+
+**Mic setup note:** The service resamples audio from 44100 Hz (microphone) down to 16000 Hz (Vosk requirement) using NumPy. `audioop` is not used as it was removed in Python 3.13.
+
+---
+
+## Push Notifications
+
+The system uses the Web Push protocol with VAPID keys for browser push notifications.
+
+**Flow:**
+
+1. User clicks "Enable Notifications" on the dashboard
+2. Browser subscribes via `PushManager` and POSTs the subscription to `/push/subscribe`
+3. Subscription is stored in MongoDB (`PushSubscription` collection)
+4. When the Pi emits an `alert` event, the Node.js server calls `sendPushToAll()` which sends a Web Push message to all stored subscriptions
+5. The service worker (`sw.js`) displays the notification and handles click-to-navigate
+
+Expired or invalid subscriptions (HTTP 410/404) are automatically removed from the database.
+
+---
+
+## API & Routes
+
+### Web Server Routes
+
+| Method | Path              | Description                                 |
+| ------ | ----------------- | ------------------------------------------- |
+| GET    | `/`               | Main patient dashboard                      |
+| GET    | `/report`         | New report form                             |
+| POST   | `/report`         | Save a new report to MongoDB                |
+| GET    | `/report/:id`     | View a single report                        |
+| POST   | `/push/subscribe` | Register a browser push subscription        |
+| POST   | `/push/alert`     | Send a manual push alert to all subscribers |
+
+### Socket.IO Events (Browser ↔ Web Server)
+
+| Event          | Direction        | Payload                                  |
+| -------------- | ---------------- | ---------------------------------------- |
+| `arduinoData`  | Server → Browser | Raw JSON string from the Pi              |
+| `connected`    | Server → Browser | Pi came online                           |
+| `disconnected` | Server → Browser | Pi went offline                          |
+| `alert`        | Server → Browser | Alert object `{title, body, url, level}` |
+
+### Socket.IO Events (Pi ↔ Web Server)
+
+| Event          | Direction   | Payload                         |
+| -------------- | ----------- | ------------------------------- |
+| `arduino_data` | Pi → Server | `{data: "<json string>"}`       |
+| `alert`        | Pi → Server | Alert object                    |
+| `vice_command` | Pi → Server | Recognized voice command string |
+
+---
+
+## Database Schema
+
+### Patient
+
+```
+name, age, gender, blood_type, phone, address,
+emergency_contact: [{ name, relation, phone }]
+```
+
+### Report
+
+```
+title, datetime, maxBpm, minBpm, avgBpm,
+condition: EXCELLENT | STABLE | RECOVERING | ELEVATED | BRADYCARDIA | ARRHYTHMIA | CRITICAL,
+notes
+```
+
+### PushSubscription
+
+```
+endpoint (unique), keys: { p256dh, auth }, expirationTime, lastSeen
 ```
 
 ---
 
-## Alert System
+## Known Limitations & Roadmap
 
-| Channel | Condition | Notes |
-|---|---|---|
-| **Twilio SMS** | Any anomaly — internet available | Sends to caregiver and family |
-| **Twilio Call** | Critical conditions | Automated voice call |
-| **Web Push** | Any anomaly — internet available | Browser/phone notification |
-| **SIM800L GSM** | Any anomaly — internet down | Mobile network fallback |
+**Current limitations:**
 
-Alerts are triggered for: `tachycardia`, `critical_tachy`, `bradycardia`, `critical_brady`, `arrhythmia`, `cardiac_arrest`, `leads_off`.
+- The Arduino sketch does not detect arrhythmia — this requires additional R-R variance logic
+- The voice command list is fixed at startup via Vosk grammar; dynamic commands are not supported
+- OpenRouter (if integrated) is not suitable for production due to free-tier model inconsistency
 
----
+**Planned features:**
 
-## Voice Interaction
-
-| Step | Technology |
-|---|---|
-| Wake word detection | Vosk keyword spotting |
-| Wake word | **"Hey Medhat"** |
-| Speech-to-Text | Vosk (offline) |
-| Command processing | Python — hub_controller.py |
-| Text-to-Speech | espeak (offline) / ElevenLabs (online) |
-| Audio input | USB microphone (resampled 44100 Hz → 16000 Hz) |
-
-### Voice Service API
-
-```python
-voice_service.start_wake_word_mode()         # blocking
-voice_service.start_wake_word_mode_async()   # non-blocking
-voice_service.start_listening_directly()     # skip wake word
-voice_service.start_listening_directly_async()
-voice_service.return_to_wake_word()
-voice_service.stop()
-```
-
-**Command timeout:** 10 seconds after wake word detection.
+- SIM800L GSM module integration for SMS alerts when there is no internet
+- ElevenLabs TTS for higher-quality voice output
+- Arrhythmia detection via R-R interval variance on the ESP32
+- Patient multi-profile support
 
 ---
 
-## Setup & Installation
+## License & Contact
 
-### Prerequisites
+© 2026 MedHat. All Rights Reserved.
 
-- Raspberry Pi 3 running Raspberry Pi OS
-- Python 3.10+
-- Node.js 18+
-- MongoDB instance (local or Atlas)
-- Arduino IDE (for flashing the ESP32)
-
-### 1. Clone the repository
-
-```bash
-git clone git@github.com:yadragon2007/SDG_3_Project.git
-cd SDG_3_Project
-```
-
-### 2. Raspberry Pi setup
-
-```bash
-cd mediguard-pi
-pip install -r requirements.txt --break-system-packages
-```
-
-Download the Vosk model and place it in `vosk-models/`:
-```bash
-# Example: small English model
-wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
-unzip vosk-model-small-en-us-0.15.zip -d vosk-models/
-```
-
-Run the hub:
-```bash
-python main.py
-```
-
-### 3. Web server setup
-
-```bash
-cd mediguard-server
-npm install
-node index.js
-```
-
-### 4. Flash the ESP32
-
-- Open `esp32_sketch/esp32_sketch.ino` in Arduino IDE
-- Set your WiFi credentials and Pi IP in the sketch constants
-- Select board: **ESP32 Dev Module**
-- Upload (hold BOOT button if needed)
-
----
-
-## Environment Variables
-
-Create a `.env` file in both `mediguard-pi/` and `mediguard-server/`:
-
-### MEDhat (`config/settings.py`)
-
-```python
-MQTT_BROKER_IP    = "192.168.x.x"     # Pi's local IP
-WEB_SERVER_IP     = "192.168.x.x"
-WEB_SERVER_PORT   = 3000
-
-TWILIO_SID        = "your_account_sid"
-TWILIO_TOKEN      = "your_auth_token"
-TWILIO_FROM       = "+1xxxxxxxxxx"
-CAREGIVER_PHONE   = "+201xxxxxxxxx"
-
-OPENROUTER_API_KEY = "your_key"
-ELEVENLABS_API_KEY = "your_key"       # optional
-
-BPM_HIGH_THRESHOLD = 100
-BPM_LOW_THRESHOLD  = 60
-BPM_CRITICAL_HIGH  = 150
-BPM_CRITICAL_LOW   = 40
-```
-
-### MEDhat (`.env`)
-
-```env
-MONGODB_URI=mongodb+srv://...
-PORT=3000
-TWILIO_SID=your_account_sid
-TWILIO_TOKEN=your_auth_token
-WEBPUSH_PUBLIC_KEY=your_vapid_public_key
-WEBPUSH_PRIVATE_KEY=your_vapid_private_key
-```
-
----
-
-## LED Indicators
-
-| LED | GPIO Pin | State | Meaning |
-|---|---|---|---|
-| Left | 17 | Blinking (1 Hz) | Pi disconnected from web server |
-| Left | 17 | Solid ON | Pi connected to web server |
-| Middle | 27 | ON | Voice listening mode active |
-| Right | — | ON | ECG sensor properly connected to patient |
-
----
-
-## Wiring Reference
-
-### AD8232 → ESP32
-
-```
-AD8232 Pin    ESP32 Pin     Notes
-----------    ---------     ------
-OUTPUT        GPIO34        ADC1 — direct 0-3.3V, no voltage divider needed
-LO+           GPIO32        Leads-off detection
-LO-           GPIO33        Leads-off detection
-SDN           3.3V          Tie HIGH to keep sensor active
-3.3V          3.3V          Power
-GND           GND           Common ground
-```
-
-> **Important:** Only use ADC1 pins (GPIO32–GPIO39) for analog ECG reads.
-> ADC2 pins conflict with the WiFi driver and will produce corrupted readings.
-
----
-
-## Important Notes
-
-- **ESP32 ADC:** ADC2 is blocked during WiFi activity. Always use ADC1 (GPIO32–GPIO39) for the ECG signal.
-- **Vosk resampling:** Python 3.13 removed `audioop`. USB mic input at 44100 Hz is resampled to 16000 Hz using `numpy`.
-- **Flask-SocketIO:** Uses `sio.start_background_task` with `sio.sleep()` for stable background streaming. Avoid `eventlet`/`gevent` for this project.
-- **Timestamps:** Python `time.time()` timestamps must be multiplied by 1000 before passing to JavaScript's `Date` object.
-- **GPIO cleanup:** Always wrap GPIO usage in `try/finally` blocks. Use `GPIO.setwarnings(False)` to suppress pin reuse warnings.
-- **Git auth:** Remote URL must use SSH format. If pushes fail, run:
-  ```bash
-  git remote set-url origin git@github.com:yadragon2007/SDG_3_Project.git
-  ```
-
----
-
-*MEDhat — Continuous care, wherever the patient goes.*
+**LinkedIn** — [Yousef Amr](https://www.linkedin.com/in/yousef-amr-b3a77b373/) — Let's talk engineering.
